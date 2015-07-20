@@ -26,6 +26,7 @@
 #define HTTP_COOKIE_H
 /// @cond DO_NOT_SHOW
 #include<vector>
+#include<string>
 
 struct CookiesInfo
 {

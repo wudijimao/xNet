@@ -35,13 +35,7 @@
 #import "HttpAsynConnection.h"
 #include "HttpCookie.h"
 
-#include "base/CCVector.h"
-#include "base/CCDirector.h"
-#include "base/CCScheduler.h"
 
-#include "platform/CCFileUtils.h"
-
-NS_CC_BEGIN
 
 namespace network {
 
@@ -50,8 +44,8 @@ static std::mutex       s_responseQueueMutex;
 
 static std::condition_variable_any s_SleepCondition;
 
-static Vector<HttpRequest*>*  s_requestQueue = nullptr;
-static Vector<HttpResponse*>* s_responseQueue = nullptr;
+static std::vector<HttpRequest*>*  s_requestQueue = nullptr;
+static std::vector<HttpResponse*>* s_responseQueue = nullptr;
 
 static HttpClient *s_HttpClient = nullptr; // pointer to singleton
     
@@ -74,9 +68,7 @@ static HttpRequest *s_requestSentinel = new HttpRequest;
 
 // Worker thread
 void HttpClient::networkThread()
-{    
-    auto scheduler = Director::getInstance()->getScheduler();
-    
+{
     while (true) @autoreleasepool {
         
         HttpRequest *request;
@@ -88,7 +80,7 @@ void HttpClient::networkThread()
                 s_SleepCondition.wait(s_requestQueueMutex);
             }
             request = s_requestQueue->at(0);
-            s_requestQueue->erase(0);
+            s_requestQueue->erase(s_requestQueue->begin());
         }
 
         if (request == s_requestSentinel) {
@@ -102,12 +94,10 @@ void HttpClient::networkThread()
         
         // add response packet into queue
         s_responseQueueMutex.lock();
-        s_responseQueue->pushBack(response);
+        s_responseQueue->push_back(response);
         s_responseQueueMutex.unlock();
         
-        if (nullptr != s_HttpClient) {
-            scheduler->performFunctionInCocosThread(CC_CALLBACK_0(HttpClient::dispatchResponseCallbacks, this));
-        }
+        dispatchResponseCallbacks();
     }
     
     // cleanup: if worker thread received quit signal, clean up un-completed request queue
@@ -131,24 +121,11 @@ void HttpClient::networkThreadAlone(HttpRequest* request, HttpResponse* response
     char errorBuffer[ERROR_SIZE] = { 0 };
     processResponse(response, errorBuffer);
 
-    auto scheduler = Director::getInstance()->getScheduler();
-    scheduler->performFunctionInCocosThread([response, request]{
         const ccHttpRequestCallback& callback = request->getCallback();
-        Ref* pTarget = request->getTarget();
-        SEL_HttpResponse pSelector = request->getSelector();
-
         if (callback != nullptr)
         {
             callback(s_HttpClient, response);
         }
-        else if (pTarget && pSelector)
-        {
-            (pTarget->*pSelector)(s_HttpClient, response);
-        }
-        response->release();
-        // do not release in other thread
-        request->release();
-    });
 }
 
 //Process Request
@@ -223,7 +200,7 @@ static int processTask(HttpRequest *request, NSString* requestType, void *stream
         }
     }
     
-    HttpAsynConnection *httpAsynConn = [[HttpAsynConnection new] autorelease];
+    HttpAsynConnection *httpAsynConn = [HttpAsynConnection new];
     httpAsynConn.srcURL = urlstring;
     httpAsynConn.sslFile = nil;
     
@@ -341,7 +318,7 @@ static void processResponse(HttpResponse* response, char* errorBuffer)
         break;
 
     default:
-        CCASSERT(true, "CCHttpClient: unknown request type, only GET and POSt are supported");
+        //CCASSERT(true, "CCHttpClient: unknown request type, only GET and POSt are supported");
         break;
     }
     
@@ -378,17 +355,16 @@ HttpClient* HttpClient::getInstance()
 
 void HttpClient::destroyInstance()
 {
-    CC_SAFE_DELETE(s_HttpClient);
 }
 
 void HttpClient::enableCookies(const char* cookieFile) {
-    if (cookieFile) {
-        s_cookieFilename = std::string(cookieFile);
-        s_cookieFilename = FileUtils::getInstance()->fullPathForFilename(s_cookieFilename);
-    }
-    else {
-        s_cookieFilename = (FileUtils::getInstance()->getWritablePath() + "cookieFile.txt");
-    }
+//    if (cookieFile) {
+//        s_cookieFilename = std::string(cookieFile);
+//        s_cookieFilename = FileUtils::getInstance()->fullPathForFilename(s_cookieFilename);
+//    }
+//    else {
+//        s_cookieFilename = (FileUtils::getInstance()->getWritablePath() + "cookieFile.txt");
+//    }
     
     s_cookie = new(std::nothrow)HttpCookie;
     s_cookie->setCookieFileName(s_cookieFilename);
@@ -411,7 +387,7 @@ HttpClient::~HttpClient()
     if (s_requestQueue != nullptr) {
         {
             std::lock_guard<std::mutex> lock(s_requestQueueMutex);
-            s_requestQueue->pushBack(s_requestSentinel);
+            s_requestQueue->push_back(s_requestSentinel);
         }
         s_SleepCondition.notify_one();
     }
@@ -433,10 +409,10 @@ bool HttpClient::lazyInitThreadSemphore()
         return true;
     } else {
         
-        s_requestQueue = new (std::nothrow) Vector<HttpRequest*>();
-        s_responseQueue = new (std::nothrow) Vector<HttpResponse*>();
+        s_requestQueue = new (std::nothrow) std::vector<HttpRequest*>();
+        s_responseQueue = new (std::nothrow) std::vector<HttpResponse*>();
 
-        auto t = std::thread(CC_CALLBACK_0(HttpClient::networkThread, this));
+        auto t = std::thread(&HttpClient::networkThread, this);
         t.detach();
     }
     
@@ -456,11 +432,10 @@ void HttpClient::send(HttpRequest* request)
         return;
     }
         
-    request->retain();
     
     if (nullptr != s_requestQueue) {
         s_requestQueueMutex.lock();
-        s_requestQueue->pushBack(request);
+        s_requestQueue->push_back(request);
         s_requestQueueMutex.unlock();
         
         // Notify thread start to work
@@ -475,7 +450,6 @@ void HttpClient::sendImmediate(HttpRequest* request)
         return;
     }
 
-    request->retain();
     // Create a HttpResponse object, the default setting is http access failed
     HttpResponse *response = new (std::nothrow) HttpResponse(request);
 
@@ -498,7 +472,7 @@ void HttpClient::dispatchResponseCallbacks()
     if (!s_responseQueue->empty())
     {
         response = s_responseQueue->at(0);
-        s_responseQueue->erase(0);
+        s_responseQueue->erase(s_responseQueue->begin());
     }
     
     s_responseQueueMutex.unlock();
@@ -507,26 +481,14 @@ void HttpClient::dispatchResponseCallbacks()
     {
         HttpRequest *request = response->getHttpRequest();
         const ccHttpRequestCallback& callback = request->getCallback();
-        Ref* pTarget = request->getTarget();
-        SEL_HttpResponse pSelector = request->getSelector();
-
         if (callback != nullptr)
         {
             callback(this, response);
         }
-        else if (pTarget && pSelector)
-        {
-            (pTarget->*pSelector)(this, response);
-        }
-        
-        response->release();
-        // do not release in other thread
-        request->release();
     }
 }
 
 }
 
-NS_CC_END
 
 

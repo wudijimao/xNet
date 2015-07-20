@@ -47,16 +47,6 @@
 
 - (void)dealloc
 {
-    [srcURL release];
-    [sslFile release];
-    [responseHeader release];
-    [responseData release];
-    [statusString release];
-    [responseError release];
-    [conn release];
-    [runLoop release];
-    
-    [super dealloc];
 }
 
 - (void) startRequest:(NSURLRequest *)request
@@ -71,9 +61,9 @@
     self.connError = nil;
     
     // create the connection with the target request and this class as the delegate
-    self.conn = [[[NSURLConnection alloc] initWithRequest:request
+    self.conn = [[NSURLConnection alloc] initWithRequest:request
                                                  delegate:self
-                                         startImmediately:NO] autorelease];
+                                         startImmediately:NO];
     
     [self.conn scheduleInRunLoop:[NSRunLoop currentRunLoop] forMode:NSDefaultRunLoopMode];
     
@@ -162,7 +152,7 @@
     //load the bundle client certificate
     NSString *certPath = [[NSBundle mainBundle] pathForResource:sslFile ofType:@"der"];
     NSData *certData = [[NSData alloc] initWithContentsOfFile:certPath];
-    CFDataRef certDataRef = (CFDataRef)certData;
+    CFDataRef certDataRef = (__bridge CFDataRef)certData;
     SecCertificateRef cert = SecCertificateCreateWithData(NULL, certDataRef);
     
     //Establish a chain of trust anchored on our bundled certificate
