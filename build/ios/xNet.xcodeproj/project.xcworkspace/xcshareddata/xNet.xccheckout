@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>IDESourceControlProjectFavoriteDictionaryKey</key>
+	<false/>
+	<key>IDESourceControlProjectIdentifier</key>
+	<string>C652662D-61D7-43F5-BC81-0095BA9D2757</string>
+	<key>IDESourceControlProjectName</key>
+	<string>xNet</string>
+	<key>IDESourceControlProjectOriginsDictionary</key>
+	<dict>
+		<key>230517E9FA05B381CED04372A5BCD7F9EFB4E2CA</key>
+		<string>https://github.com/wudijimao/xNet.git</string>
+	</dict>
+	<key>IDESourceControlProjectPath</key>
+	<string>build/ios/xNet.xcodeproj</string>
+	<key>IDESourceControlProjectRelativeInstallPathDictionary</key>
+	<dict>
+		<key>230517E9FA05B381CED04372A5BCD7F9EFB4E2CA</key>
+		<string>../../../..</string>
+	</dict>
+	<key>IDESourceControlProjectURL</key>
+	<string>https://github.com/wudijimao/xNet.git</string>
+	<key>IDESourceControlProjectVersion</key>
+	<integer>111</integer>
+	<key>IDESourceControlProjectWCCIdentifier</key>
+	<string>230517E9FA05B381CED04372A5BCD7F9EFB4E2CA</string>
+	<key>IDESourceControlProjectWCConfigurations</key>
+	<array>
+		<dict>
+			<key>IDESourceControlRepositoryExtensionIdentifierKey</key>
+			<string>public.vcs.git</string>
+			<key>IDESourceControlWCCIdentifierKey</key>
+			<string>230517E9FA05B381CED04372A5BCD7F9EFB4E2CA</string>
+			<key>IDESourceControlWCCName</key>
+			<string>xNet</string>
+		</dict>
+	</array>
+</dict>
+</plist>
